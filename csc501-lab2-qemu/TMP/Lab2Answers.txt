@@ -1,0 +1,78 @@
+1.1. Priority inheritance is one approach to address this issue. Please give another approach and briefly describe its idea.
+Solution: There two approaches to this Priority Inversion problem
+			a) Priority Ceiling Protocol: In this priority ceiling protocol we assign a priority ceiling value to each process which has acquired and which will be equal to the highest priority of the process which is waiting for the lock.
+			Now if a process wants to acquire the lock it can only do so if its priority is strictly higher than the ceilings of all the processes holding the lock . If this process gets blocked by the lock then the processes currently holding the locks will inherit the priority of this process.
+			Priority ceiling protocol prevents deadlocks and reduces worst case blocking time.
+			b) Random Boosting: In random boosting the priorities of the processes currently holding the lock will be boosted until they get out of heir critical section. This approach was used by Microsoft Windows to solve Priority Inversion problem.
+
+1.2. 
+Solution: You can check from the results the priorities of the processes which acquired the lock will get boosted to 25 as it is the priority of the waiting process A, which is high priority process. Now in the same case we can also check that the priority of the processess which acquired the semaphore will not get boosted to process A's priority which is waiting in the queue. 
+Since using priority inheritance the priorities of the processes increases and the get more CPU time.  
+
+Result:
+With Semaphores Priority Inversion Implementation
+Inside Semaphore Implementation
+  B: to acquired semaphore
+  B: acquired semaphore
+  C: to acquired semaphore
+  C: acquired semaphore
+  D: to acquired semaphore
+  D: acquired semaphore
+  E: to acquired semaphore
+  E: acquired semaphore
+  A: to acquired semaphore
+Priority of B doesn't increases to A, B's Priority : 20
+Priority of C doesn't increases to A, C's Priority : 18
+Priority of D doesn't increases to A, D's Priority : 15
+Priority of E doesn't increases to A, E's Priority : 12
+  A: acquired semaphore
+  B: released semaphore
+  C: released semaphore
+  D: released semaphore
+  E: released semaphore
+  A: released semaphore : Time A get the semaphore 600
+
+With Lock Priority Inversion Implementation
+Inside Lock Implementation
+  B: to acquired lock
+  B: acquired lock
+  C: to acquired lock
+  C: acquired lock
+  D: to acquired lock
+  D: acquired lock
+  E: to acquired lock
+  E: acquired lock
+  A: to acquired lock
+Priority of B increases to A, B's Priority : 25
+Priority of C increases to A, C's Priority : 25
+Priority of D increases to A, D's Priority : 25
+Priority of E increases to A, E's Priority : 25
+  B: released lock
+  C: released lock
+  D: released lock
+  A: acquired lock
+  E: released lock
+  A: released lock : Time A get the lock 900
+
+Completed
+
+
+2. You are asked to describe the potential issue caused by the incorrect synchronization and point out at least one possible thread interleaving that would trigger the problem.
+Solution: 
+The problem here is two or more readers can get into try_update() and perform write operation parallelly, this might change the values assigned to the variables as it depends on the order of execution of these readers and results in an unexpected output. The main problem caused here is by Race Condition, which is an undesirable situation that occurs when two or more processes perform operations on the shared variable at the same time.
+In the above code the LOCK_READER allows multiple readers to enter into try_update() and the global_semaphore is a counting semaphore which allows 10 readers. Here the buffer_add is a global structure where 10 concurrent readers can access it. Now if more than one reader tries to execute the buffer_add function, both might start from the same buf+buf->len as we can see that buf_len may not be updated. Lets us consider a example with preemption when a low priority process reader gets prempted just before updating the buf->len value.
+For example let us consider there are only two readers threads RD1 and RD2, RD1 is low priority and RD2 is high priority thread, now both of them will call do_update(), first RD1 accquire &lock first and gets into try_update() at TD1. Then second reader RD2 will accquire &lock and gets into try_update() at TD2. Now both of them can accquire the lock global_semaphore at the same time as global_semaphore has value 10. Now RD1 can execute till memcpy (buf->buf + buf->len, txt, size); at that movement if RD2 comes and preempts RD1. Then RD2 starts execution and enters the buffer_add() function, at this movement as the low priority process hasn't modified the buf->len so RD2 will override the data written by the RD1. Now the buffer length is updated perfectly but the data of the RD1 is overridden.
+
+RD1 writes "Hello"
+memory: H | e | l | l | o |
+buts does not update the buf->len, thereforth buf->len = 0;
+
+RD2 writes "Happys", overrides the previous data in memory
+memory: H | a | p | p | y | s |
+update the buf->len, thereforth buf->len = 6;
+
+Now RD1 comes back and write buf->len = 5;
+
+
+
+
